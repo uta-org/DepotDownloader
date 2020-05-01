@@ -7,19 +7,19 @@ using System.IO.Compression;
 namespace DepotDownloader
 {
     [ProtoContract]
-    class DepotConfigStore
+    internal class DepotConfigStore
     {
         [ProtoMember(1)]
         public Dictionary<uint, ulong> InstalledManifestIDs { get; private set; }
 
-        string FileName = null;
+        private string FileName = null;
 
-        DepotConfigStore()
+        private DepotConfigStore()
         {
             InstalledManifestIDs = new Dictionary<uint, ulong>();
         }
 
-        static bool Loaded
+        private static bool Loaded
         {
             get { return Instance != null; }
         }

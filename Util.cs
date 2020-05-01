@@ -8,7 +8,7 @@ using System.Text;
 
 namespace DepotDownloader
 {
-    static class Util
+    internal static class Util
     {
         public static string GetSteamOS()
         {
@@ -38,22 +38,22 @@ namespace DepotDownloader
             ConsoleKeyInfo keyInfo;
             StringBuilder password = new StringBuilder();
 
-            do 
+            do
             {
-                keyInfo = Console.ReadKey( true );
+                keyInfo = Console.ReadKey(true);
 
-                if ( keyInfo.Key == ConsoleKey.Backspace )
+                if (keyInfo.Key == ConsoleKey.Backspace)
                 {
-                    if ( password.Length > 0 )
-                        password.Remove( password.Length - 1, 1 );
+                    if (password.Length > 0)
+                        password.Remove(password.Length - 1, 1);
                     continue;
                 }
 
                 /* Printable ASCII characters only */
                 char c = keyInfo.KeyChar;
-                if ( c >= ' ' && c <= '~' )
-                    password.Append( c );
-            } while ( keyInfo.Key != ConsoleKey.Enter );
+                if (c >= ' ' && c <= '~')
+                    password.Append(c);
+            } while (keyInfo.Key != ConsoleKey.Enter);
 
             return password.ToString();
         }
@@ -102,34 +102,34 @@ namespace DepotDownloader
             return BitConverter.GetBytes(a | (b << 16));
         }
 
-        public static byte[] SHAHash( byte[] input )
+        public static byte[] SHAHash(byte[] input)
         {
             using (var sha = SHA1.Create())
             {
-                var output = sha.ComputeHash( input );
+                var output = sha.ComputeHash(input);
 
                 return output;
             }
         }
 
-        public static byte[] DecodeHexString( string hex )
+        public static byte[] DecodeHexString(string hex)
         {
-            if ( hex == null )
+            if (hex == null)
                 return null;
 
             int chars = hex.Length;
-            byte[] bytes = new byte[ chars / 2 ];
+            byte[] bytes = new byte[chars / 2];
 
-            for ( int i = 0 ; i < chars ; i += 2 )
-                bytes[ i / 2 ] = Convert.ToByte( hex.Substring( i, 2 ), 16 );
+            for (int i = 0; i < chars; i += 2)
+                bytes[i / 2] = Convert.ToByte(hex.Substring(i, 2), 16);
 
             return bytes;
         }
 
-        public static string EncodeHexString( byte[] input )
+        public static string EncodeHexString(byte[] input)
         {
-            return input.Aggregate( new StringBuilder(),
-                ( sb, v ) => sb.Append( v.ToString( "x2" ) )
+            return input.Aggregate(new StringBuilder(),
+                (sb, v) => sb.Append(v.ToString("x2"))
                 ).ToString();
         }
     }

@@ -12,7 +12,7 @@ namespace DepotDownloader
     /// <summary>
     /// CDNClientPool provides a pool of connections to CDN endpoints, requesting CDN tokens as needed
     /// </summary>
-    class CDNClientPool
+    internal class CDNClientPool
     {
         private const int ServerEndpointMinimumSize = 8;
 

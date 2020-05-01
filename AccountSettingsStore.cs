@@ -11,9 +11,9 @@ using SteamKit2.Discovery;
 namespace DepotDownloader
 {
     [ProtoContract]
-    class AccountSettingsStore
+    internal class AccountSettingsStore
     {
-        [ProtoMember(1, IsRequired=false)]
+        [ProtoMember(1, IsRequired = false)]
         public Dictionary<string, byte[]> SentryData { get; private set; }
 
         [ProtoMember(2, IsRequired = false)]
@@ -22,22 +22,22 @@ namespace DepotDownloader
         [ProtoMember(3, IsRequired = false)]
         public Dictionary<string, string> LoginKeys { get; private set; }
 
-        string FileName = null;
+        private string FileName = null;
 
-        AccountSettingsStore()
+        private AccountSettingsStore()
         {
             SentryData = new Dictionary<string, byte[]>();
             ContentServerPenalty = new System.Collections.Concurrent.ConcurrentDictionary<string, int>();
             LoginKeys = new Dictionary<string, string>();
         }
 
-        static bool Loaded
+        private static bool Loaded
         {
             get { return Instance != null; }
         }
 
         public static AccountSettingsStore Instance = null;
-        static readonly IsolatedStorageFile IsolatedStorage = IsolatedStorageFile.GetUserStoreForAssembly();
+        private static readonly IsolatedStorageFile IsolatedStorage = IsolatedStorageFile.GetUserStoreForAssembly();
 
         public static void LoadFromFile(string filename)
         {

@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace DepotDownloader
 {
-    class DownloadConfig
+    internal class DownloadConfig
     {
         public int CellID { get; set; }
         public bool DownloadAllPlatforms { get; set; }
@@ -28,6 +28,6 @@ namespace DepotDownloader
         public bool RememberPassword { get; set; }
 
         // A Steam LoginID to allow multiple concurrent connections
-        public uint? LoginID {get; set; }
+        public uint? LoginID { get; set; }
     }
 }

@@ -8,7 +8,7 @@ using SteamKit2;
 namespace DepotDownloader
 {
     [ProtoContract()]
-    class ProtoManifest
+    internal class ProtoManifest
     {
         // Proto ctor
         private ProtoManifest()
@@ -140,7 +140,6 @@ namespace DepotDownloader
 
         public void SaveToFile(string filename, out byte[] checksum)
         {
-            
             using (MemoryStream ms = new MemoryStream())
             {
                 ProtoBuf.Serializer.Serialize<ProtoManifest>(ms, this);
