@@ -7,7 +7,7 @@ using SteamKit2;
 
 namespace DepotDownloader
 {
-    [ProtoContract()]
+    [ProtoContract]
     internal class ProtoManifest
     {
         // Proto ctor
@@ -22,7 +22,7 @@ namespace DepotDownloader
             ID = id;
         }
 
-        [ProtoContract()]
+        [ProtoContract]
         public class FileData
         {
             // Proto ctor
@@ -47,25 +47,25 @@ namespace DepotDownloader
             /// Gets the chunks that this file is composed of.
             /// </summary>
             [ProtoMember(2)]
-            public List<ChunkData> Chunks { get; private set; }
+            public List<ChunkData> Chunks { get; }
 
             /// <summary>
             /// Gets the file flags
             /// </summary>
             [ProtoMember(3)]
-            public EDepotFileFlag Flags { get; private set; }
+            public EDepotFileFlag Flags { get; }
 
             /// <summary>
             /// Gets the total size of this file.
             /// </summary>
             [ProtoMember(4)]
-            public ulong TotalSize { get; private set; }
+            public ulong TotalSize { get; }
 
             /// <summary>
             /// Gets the hash of this file.
             /// </summary>
             [ProtoMember(5)]
-            public byte[] FileHash { get; private set; }
+            public byte[] FileHash { get; }
         }
 
         [ProtoContract(SkipConstructor = true)]
@@ -84,38 +84,38 @@ namespace DepotDownloader
             /// Gets the SHA-1 hash chunk id.
             /// </summary>
             [ProtoMember(1)]
-            public byte[] ChunkID { get; private set; }
+            public byte[] ChunkID { get; }
 
             /// <summary>
             /// Gets the expected Adler32 checksum of this chunk.
             /// </summary>
             [ProtoMember(2)]
-            public byte[] Checksum { get; private set; }
+            public byte[] Checksum { get; }
 
             /// <summary>
             /// Gets the chunk offset.
             /// </summary>
             [ProtoMember(3)]
-            public ulong Offset { get; private set; }
+            public ulong Offset { get; }
 
             /// <summary>
             /// Gets the compressed length of this chunk.
             /// </summary>
             [ProtoMember(4)]
-            public uint CompressedLength { get; private set; }
+            public uint CompressedLength { get; }
 
             /// <summary>
             /// Gets the decompressed length of this chunk.
             /// </summary>
             [ProtoMember(5)]
-            public uint UncompressedLength { get; private set; }
+            public uint UncompressedLength { get; }
         }
 
         [ProtoMember(1)]
-        public List<FileData> Files { get; private set; }
+        public List<FileData> Files { get; }
 
         [ProtoMember(2)]
-        public ulong ID { get; private set; }
+        public ulong ID { get; }
 
         public static ProtoManifest LoadFromFile(string filename, out byte[] checksum)
         {
@@ -134,7 +134,7 @@ namespace DepotDownloader
                 checksum = Util.SHAHash(ms.ToArray());
 
                 ms.Seek(0, SeekOrigin.Begin);
-                return ProtoBuf.Serializer.Deserialize<ProtoManifest>(ms);
+                return Serializer.Deserialize<ProtoManifest>(ms);
             }
         }
 
@@ -142,7 +142,7 @@ namespace DepotDownloader
         {
             using (MemoryStream ms = new MemoryStream())
             {
-                ProtoBuf.Serializer.Serialize<ProtoManifest>(ms, this);
+                Serializer.Serialize(ms, this);
 
                 checksum = Util.SHAHash(ms.ToArray());
 

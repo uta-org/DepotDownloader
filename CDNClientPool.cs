@@ -1,32 +1,29 @@
-﻿using SteamKit2;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using SteamKit2;
 
 namespace DepotDownloader
 {
     /// <summary>
-    /// CDNClientPool provides a pool of connections to CDN endpoints, requesting CDN tokens as needed
+    ///     CDNClientPool provides a pool of connections to CDN endpoints, requesting CDN tokens as needed
     /// </summary>
     internal class CDNClientPool
     {
         private const int ServerEndpointMinimumSize = 8;
 
-        private readonly Steam3Session steamSession;
-
-        public CDNClient CDNClient { get; }
-
         private readonly ConcurrentBag<CDNClient.Server> activeConnectionPool;
         private readonly BlockingCollection<CDNClient.Server> availableServerEndpoints;
+        private readonly Task monitorTask;
 
         private readonly AutoResetEvent populatePoolEvent;
-        private readonly Task monitorTask;
         private readonly CancellationTokenSource shutdownToken;
-        public CancellationTokenSource ExhaustedToken { get; set; }
+
+        private readonly Steam3Session steamSession;
 
         public CDNClientPool(Steam3Session steamSession)
         {
@@ -42,6 +39,9 @@ namespace DepotDownloader
             monitorTask = Task.Factory.StartNew(ConnectionPoolMonitorAsync).Unwrap();
         }
 
+        public CDNClient CDNClient { get; }
+        public CancellationTokenSource ExhaustedToken { get; set; }
+
         public void Shutdown()
         {
             shutdownToken.Cancel();
@@ -53,14 +53,12 @@ namespace DepotDownloader
             var backoffDelay = 0;
 
             while (!shutdownToken.IsCancellationRequested)
-            {
                 try
                 {
-                    var cdnServers = await ContentServerDirectoryService.LoadAsync(this.steamSession.steamClient.Configuration, ContentDownloader.Config.CellID, shutdownToken.Token);
+                    var cdnServers = await ContentServerDirectoryService.LoadAsync(
+                        steamSession.steamClient.Configuration, ContentDownloader.Config.CellID, shutdownToken.Token);
                     if (cdnServers != null)
-                    {
                         return cdnServers;
-                    }
                 }
                 catch (Exception ex)
                 {
@@ -73,14 +71,13 @@ namespace DepotDownloader
                         await Task.Delay(TimeSpan.FromSeconds(backoffDelay));
                     }
                 }
-            }
 
             return null;
         }
 
         private async Task ConnectionPoolMonitorAsync()
         {
-            bool didPopulate = false;
+            var didPopulate = false;
 
             while (!shutdownToken.IsCancellationRequested)
             {
@@ -105,12 +102,8 @@ namespace DepotDownloader
                     }).OrderBy(x => x.Item2).ThenBy(x => x.Item1.WeightedLoad);
 
                     foreach (var (server, weight) in weightedCdnServers)
-                    {
                         for (var i = 0; i < server.NumEntries; i++)
-                        {
                             availableServerEndpoints.Add(server);
-                        }
-                    }
 
                     didPopulate = true;
                 }
@@ -134,30 +127,25 @@ namespace DepotDownloader
                 var result = await authTokenCallbackPromise.Task;
                 return result.Token;
             }
-            else
-            {
-                throw new Exception($"Failed to retrieve CDN token for server {server.Host} depot {depotId}");
-            }
+
+            throw new Exception($"Failed to retrieve CDN token for server {server.Host} depot {depotId}");
         }
 
         private CDNClient.Server BuildConnection(CancellationToken token)
         {
             if (availableServerEndpoints.Count < ServerEndpointMinimumSize)
-            {
                 populatePoolEvent.Set();
-            }
 
             return availableServerEndpoints.Take(token);
         }
 
-        public async Task<Tuple<CDNClient.Server, string>> GetConnectionForDepot(uint appId, uint depotId, CancellationToken token)
+        public async Task<Tuple<CDNClient.Server, string>> GetConnectionForDepot(uint appId, uint depotId,
+            CancellationToken token)
         {
             // Take a free connection from the connection pool
             // If there were no free connections, create a new one from the server list
             if (!activeConnectionPool.TryTake(out var server))
-            {
                 server = BuildConnection(token);
-            }
 
             // If we don't have a CDN token yet for this server and depot, fetch one now
             var cdnToken = await AuthenticateConnection(appId, depotId, server);
