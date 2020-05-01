@@ -6,6 +6,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using SteamKit2;
+using UnityEngine;
 
 namespace DepotDownloader
 {
@@ -62,7 +63,7 @@ namespace DepotDownloader
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Failed to retrieve content server list: {0}", ex.Message);
+                    Debug.Log($"Failed to retrieve content server list: {ex.Message}");
 
                     if (ex is SteamKitWebRequestException e && e.StatusCode == (HttpStatusCode)429)
                     {

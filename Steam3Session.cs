@@ -19,10 +19,7 @@ namespace DepotDownloader
             public bool LoggedOn { get; set; }
             public ulong SessionToken { get; set; }
 
-            public bool IsValid
-            {
-                get { return LoggedOn; }
-            }
+            public bool IsValid => LoggedOn;
         }
 
         public ReadOnlyCollection<SteamApps.LicenseListCallback.License> Licenses
@@ -31,22 +28,22 @@ namespace DepotDownloader
             private set;
         }
 
-        public Dictionary<uint, byte[]> AppTickets { get; private set; }
-        public Dictionary<uint, ulong> AppTokens { get; private set; }
-        public Dictionary<uint, byte[]> DepotKeys { get; private set; }
-        public ConcurrentDictionary<string, TaskCompletionSource<SteamApps.CDNAuthTokenCallback>> CDNAuthTokens { get; private set; }
-        public Dictionary<uint, SteamApps.PICSProductInfoCallback.PICSProductInfo> AppInfo { get; private set; }
-        public Dictionary<uint, SteamApps.PICSProductInfoCallback.PICSProductInfo> PackageInfo { get; private set; }
-        public Dictionary<string, byte[]> AppBetaPasswords { get; private set; }
+        public Dictionary<uint, byte[]> AppTickets { get; }
+        public Dictionary<uint, ulong> AppTokens { get; }
+        public Dictionary<uint, byte[]> DepotKeys { get; }
+        public ConcurrentDictionary<string, TaskCompletionSource<SteamApps.CDNAuthTokenCallback>> CDNAuthTokens { get; }
+        public Dictionary<uint, SteamApps.PICSProductInfoCallback.PICSProductInfo> AppInfo { get; }
+        public Dictionary<uint, SteamApps.PICSProductInfoCallback.PICSProductInfo> PackageInfo { get; }
+        public Dictionary<string, byte[]> AppBetaPasswords { get; }
 
         public SteamClient steamClient;
         public SteamUser steamUser;
-        private SteamApps steamApps;
-        private SteamUnifiedMessages.UnifiedService<IPublishedFile> steamPublishedFile;
+        private readonly SteamApps steamApps;
+        private readonly SteamUnifiedMessages.UnifiedService<IPublishedFile> steamPublishedFile;
 
-        private CallbackManager callbacks;
+        private readonly CallbackManager callbacks;
 
-        private bool authenticatedUser;
+        private readonly bool authenticatedUser;
         private bool bConnected;
         private bool bConnecting;
         private bool bAborted;
@@ -58,10 +55,10 @@ namespace DepotDownloader
         private DateTime connectTime;
 
         // input
-        private SteamUser.LogOnDetails logonDetails;
+        private readonly SteamUser.LogOnDetails logonDetails;
 
         // output
-        private Credentials credentials;
+        private readonly Credentials credentials;
 
         private static readonly TimeSpan STEAM3_TIMEOUT = TimeSpan.FromSeconds(30);
 
@@ -110,9 +107,7 @@ namespace DepotDownloader
             {
                 FileInfo fi = new FileInfo($"{logonDetails.Username}.sentryFile");
                 if (AccountSettingsStore.Instance.SentryData != null && AccountSettingsStore.Instance.SentryData.ContainsKey(logonDetails.Username))
-                {
                     logonDetails.SentryFileHash = Util.SHAHash(AccountSettingsStore.Instance.SentryData[logonDetails.Username]);
-                }
                 else if (fi.Exists && fi.Length > 0)
                 {
                     var sentryData = File.ReadAllBytes(fi.FullName);
@@ -135,9 +130,7 @@ namespace DepotDownloader
 
                 int seq = this.seq;
                 do
-                {
                     WaitForCallbacks();
-                }
                 while (!bAborted && seq == this.seq && !waiter());
             }
 
@@ -164,14 +157,10 @@ namespace DepotDownloader
             {
                 completed = true;
                 if (appTokens.AppTokensDenied.Contains(appId))
-                {
                     Debug.Log($"Insufficient privileges to get access token for app {appId}");
-                }
 
                 foreach (var token_dict in appTokens.AppTokens)
-                {
                     AppTokens.Add(token_dict.Key, token_dict.Value);
-                }
             };
 
             WaitUntilCallback(() =>
