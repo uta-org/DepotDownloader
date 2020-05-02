@@ -35,6 +35,12 @@ namespace DepotDownloader
         private static CDNClientPool cdnPool;
         private static readonly string STAGING_DIR = Path.Combine(CONFIG_DIR, "staging");
 
+        public static bool IsInitialized => steam3 != null;
+
+        public static Action<ulong, ulong> DownloadProgressChanged { get; internal set; }
+
+        public static Action<object, byte[]> DownloadCompleted { get; internal set; }
+
         private static bool CreateDirectories(uint depotId, uint depotVersion, out string installDir)
         {
             installDir = null;
@@ -721,12 +727,13 @@ namespace DepotDownloader
 
                 var semaphore = new SemaphoreSlim(Config.MaxDownloads);
                 var files = filesAfterExclusions.Where(f => !f.Flags.HasFlag(EDepotFileFlag.Directory)).ToArray();
-                var tasks = new Task[files.Length];
+                var tasks = new Task<byte[]>[files.Length];
                 for (var i = 0; i < files.Length; i++)
                 {
                     var file = files[i];
-                    var task = Task.Run(async () =>
+                    var task = Task.Run<byte[]>(async () =>
                     {
+                        byte[] arr;
                         cts.Token.ThrowIfCancellationRequested();
 
                         try
@@ -821,8 +828,9 @@ namespace DepotDownloader
                                 {
                                     size_downloaded += file.TotalSize;
                                     Debug.Log($"{size_downloaded / (float)complete_download_size * 100.0f,6:#00.00}% {fileFinalPath}");
+                                    arr = fs.ReadFully();
                                     fs?.Dispose();
-                                    return;
+                                    return arr;
                                 }
                                 else
                                     size_downloaded +=
@@ -906,9 +914,12 @@ namespace DepotDownloader
                                 fs.Seek((long)chunk.Offset, SeekOrigin.Begin);
                                 fs.Write(chunkData.Data, 0, chunkData.Data.Length);
 
+                                DownloadProgressChanged(chunk.UncompressedLength, complete_download_size);
+
                                 size_downloaded += chunk.UncompressedLength;
                             }
 
+                            arr = fs.ReadFully();
                             fs.Dispose();
 
                             Debug.Log($"{size_downloaded / (float)complete_download_size * 100.0f,6:#00.00}% {fileFinalPath}");
@@ -917,22 +928,38 @@ namespace DepotDownloader
                         {
                             semaphore.Release();
                         }
+
+                        return arr;
                     });
 
                     tasks[i] = task;
                 }
 
-                await Task.WhenAll(tasks).ConfigureAwait(false);
+                // TODO: Cancellable FileStream
+
+                var arrays = await Task.WhenAll(tasks).ConfigureAwait(false);
 
                 DepotConfigStore.Instance.InstalledManifestIDs[depot.id] = depot.manifestId;
                 DepotConfigStore.Save();
 
                 Debug.Log(
                     $"Depot {depot.id} - Downloaded {DepotBytesCompressed} bytes ({DepotBytesUncompressed} bytes uncompressed)");
+
+                Debug.Assert(arrays.Length == 1); // TODO: This works only for single file download
+                DownloadCompleted(null, arrays[0]);
             }
 
             Debug.Log(
                 $"Total downloaded: {TotalBytesCompressed} bytes ({TotalBytesUncompressed} bytes uncompressed) from {depots.Count} depots");
+        }
+
+        private static byte[] ReadFully(this Stream input)
+        {
+            using (var ms = new MemoryStream())
+            {
+                input.CopyTo(ms);
+                return ms.ToArray();
+            }
         }
 
         private sealed class DepotDownloadInfo
