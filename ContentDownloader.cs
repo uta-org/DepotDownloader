@@ -39,7 +39,7 @@ namespace DepotDownloader
 
         public static Action<ulong, ulong> DownloadProgressChanged { get; internal set; }
 
-        public static Action<object, byte[]> DownloadCompleted { get; internal set; }
+        public static Action<byte[]> DownloadCompleted { get; internal set; }
 
         private static bool CreateDirectories(uint depotId, uint depotVersion, out string installDir)
         {
@@ -221,7 +221,7 @@ namespace DepotDownloader
                     var password = Config.BetaPassword;
                     if (password == null)
                     {
-                        Console.Write($"Please enter the password for branch {branch}: ");
+                        Debug.Log($"Please enter the password for branch {branch}: ");
                         Config.BetaPassword = password = Console.ReadLine();
                     }
 
@@ -541,6 +541,8 @@ namespace DepotDownloader
             ulong TotalBytesCompressed = 0;
             ulong TotalBytesUncompressed = 0;
 
+            Debug.Log($"Depots to download: {depots.Count}");
+
             foreach (var depot in depots)
             {
                 ulong DepotBytesCompressed = 0;
@@ -585,7 +587,7 @@ namespace DepotDownloader
                         {
                             // We only have to show this warning if the old manifest ID was different
                             if (lastManifestId != depot.manifestId)
-                                Debug.Log($"Manifest {lastManifestId} on disk did not match the expected checksum.");
+                                Debug.LogWarning($"Manifest {lastManifestId} on disk did not match the expected checksum.");
                             oldProtoManifest = null;
                         }
                     }
@@ -599,17 +601,18 @@ namespace DepotDownloader
                 else
                 {
                     var newManifestFileName = Path.Combine(configDir, $"{depot.manifestId}.bin");
-                    if (newManifestFileName != null)
+                    // if (newManifestFileName != null)
                     {
-                        byte[] expectedChecksum;
+                        byte[] expectedChecksum = null;
 
                         try
                         {
+                            //if (File.Exists(newManifestFileName + ".sha")) // bugfix for Unity3D
                             expectedChecksum = File.ReadAllBytes(newManifestFileName + ".sha");
                         }
                         catch (IOException)
                         {
-                            expectedChecksum = null;
+                            //expectedChecksum = null;
                         }
 
                         newProtoManifest = ProtoManifest.LoadFromFile(newManifestFileName, out var currentChecksum);
@@ -626,7 +629,7 @@ namespace DepotDownloader
                         Debug.Log($"Already have manifest {depot.manifestId} for depot {depot.id}.");
                     else
                     {
-                        Console.Write("Downloading depot manifest...");
+                        Debug.Log("Downloading depot manifest...");
 
                         DepotManifest depotManifest = null;
 
@@ -651,22 +654,22 @@ namespace DepotDownloader
                                 if (e.StatusCode == HttpStatusCode.Unauthorized ||
                                     e.StatusCode == HttpStatusCode.Forbidden)
                                 {
-                                    Debug.Log($"Encountered 401 for depot manifest {depot.id} {depot.manifestId}. Aborting.");
+                                    Debug.LogError($"Encountered 401 for depot manifest {depot.id} {depot.manifestId}. Aborting.");
                                     break;
                                 }
 
-                                Debug.Log($"Encountered error downloading depot manifest {depot.id} {depot.manifestId}: {e.StatusCode}");
+                                Debug.LogError($"Encountered error downloading depot manifest {depot.id} {depot.manifestId}: {e.StatusCode}");
                             }
                             catch (Exception e)
                             {
                                 cdnPool.ReturnBrokenConnection(connection);
-                                Debug.Log($"Encountered error downloading manifest for depot {depot.id} {depot.manifestId}: {e.Message}");
+                                Debug.LogError($"Encountered error downloading manifest for depot {depot.id} {depot.manifestId}: {e.Message}");
                             }
                         }
 
                         if (depotManifest == null)
                         {
-                            Debug.Log($"\nUnable to download manifest {depot.manifestId} for depot {depot.id}");
+                            Debug.LogError($"\nUnable to download manifest {depot.manifestId} for depot {depot.id}");
                             return;
                         }
 
@@ -731,7 +734,7 @@ namespace DepotDownloader
                 for (var i = 0; i < files.Length; i++)
                 {
                     var file = files[i];
-                    var task = Task.Run<byte[]>(async () =>
+                    var task = Task.Run(async () =>
                     {
                         byte[] arr;
                         cts.Token.ThrowIfCancellationRequested();
@@ -930,7 +933,7 @@ namespace DepotDownloader
                         }
 
                         return arr;
-                    });
+                    }, cts.Token);
 
                     tasks[i] = task;
                 }
@@ -946,7 +949,7 @@ namespace DepotDownloader
                     $"Depot {depot.id} - Downloaded {DepotBytesCompressed} bytes ({DepotBytesUncompressed} bytes uncompressed)");
 
                 Debug.Assert(arrays.Length == 1); // TODO: This works only for single file download
-                DownloadCompleted(null, arrays[0]);
+                DownloadCompleted(arrays[0]);
             }
 
             Debug.Log(
