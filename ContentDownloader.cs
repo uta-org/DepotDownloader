@@ -6,6 +6,7 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using SteamKit2;
 using UnityEngine;
 
@@ -39,7 +40,7 @@ namespace DepotDownloader
 
         public static Action<ulong, ulong> DownloadProgressChanged { get; internal set; }
 
-        public static Action<byte[]> DownloadCompleted { get; internal set; }
+        public static Action<List<DownloadedItem>> DownloadCompleted { get; internal set; }
 
         private static bool CreateDirectories(uint depotId, uint depotVersion, out string installDir)
         {
@@ -732,7 +733,7 @@ namespace DepotDownloader
 
                 var semaphore = new SemaphoreSlim(Config.MaxDownloads);
                 var files = filesAfterExclusions.Where(f => !f.Flags.HasFlag(EDepotFileFlag.Directory)).ToArray();
-                var tasks = new Task<byte[]>[files.Length];
+                var tasks = new Task<DownloadedItem>[files.Length];
                 for (var i = 0; i < files.Length; i++)
                 {
                     var file = files[i];
@@ -741,12 +742,13 @@ namespace DepotDownloader
                         byte[] arr;
                         cts.Token.ThrowIfCancellationRequested();
 
+                        string fileFinalPath = string.Empty;
                         try
                         {
                             await semaphore.WaitAsync().ConfigureAwait(false);
                             cts.Token.ThrowIfCancellationRequested();
 
-                            var fileFinalPath = Path.Combine(depot.installDir, file.FileName);
+                            fileFinalPath = Path.Combine(depot.installDir, file.FileName);
                             var fileStagingPath = Path.Combine(stagingDir, file.FileName);
 
                             // This may still exist if the previous run exited before cleanup
@@ -835,7 +837,7 @@ namespace DepotDownloader
                                     Debug.Log($"{size_downloaded / (float)complete_download_size * 100.0f,6:#00.00}% {fileFinalPath}");
                                     arr = fs.ReadFully();
                                     fs?.Dispose();
-                                    return arr;
+                                    return new DownloadedItem(fileFinalPath, arr);
                                 }
                                 else
                                     size_downloaded +=
@@ -934,7 +936,7 @@ namespace DepotDownloader
                             semaphore.Release();
                         }
 
-                        return arr;
+                        return new DownloadedItem(fileFinalPath, arr);
                     }, cts.Token);
 
                     tasks[i] = task;
@@ -951,7 +953,7 @@ namespace DepotDownloader
                     $"Depot {depot.id} - Downloaded {DepotBytesCompressed} bytes ({DepotBytesUncompressed} bytes uncompressed)");
 
                 Debug.Assert(arrays.Length == 1); // TODO: This works only for single file download
-                DownloadCompleted(arrays[0]);
+                DownloadCompleted(arrays.ToList());
             }
 
             Debug.Log(
@@ -996,6 +998,22 @@ namespace DepotDownloader
 
             public ProtoManifest.ChunkData OldChunk { get; }
             public ProtoManifest.ChunkData NewChunk { get; }
+        }
+
+        public class DownloadedItem
+        {
+            public string Path { get; }
+            public byte[] Data { get; }
+
+            private DownloadedItem()
+            {
+            }
+
+            public DownloadedItem(string path, byte[] data)
+            {
+                Path = path;
+                Data = data;
+            }
         }
     }
 }
