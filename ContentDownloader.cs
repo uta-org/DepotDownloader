@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Newtonsoft.Json;
 using SteamKit2;
 using UnityEngine;
 
@@ -38,7 +39,7 @@ namespace DepotDownloader
 
         public static bool IsInitialized => steam3 != null;
 
-        public static Action<ulong, ulong> DownloadProgressChanged { get; internal set; }
+        public static Action<long, long> DownloadProgressChanged { get; internal set; }
 
         public static Action<List<DownloadedItem>> OnDownloadFinished { get; set; }
 
@@ -927,7 +928,7 @@ namespace DepotDownloader
                                 fs.Seek((long)chunk.Offset, SeekOrigin.Begin);
                                 fs.Write(chunkData.Data, 0, chunkData.Data.Length);
 
-                                DownloadProgressChanged(chunk.UncompressedLength, complete_download_size);
+                                DownloadProgressChanged(chunk.UncompressedLength, (long)complete_download_size);
 
                                 size_downloaded += chunk.UncompressedLength;
                             }
@@ -1009,10 +1010,25 @@ namespace DepotDownloader
             public ProtoManifest.ChunkData NewChunk { get; }
         }
 
+        [Serializable]
         public class DownloadedItem
         {
             public string Path { get; }
+
+            [JsonIgnore]
             public byte[] Data { get; }
+
+            [JsonIgnore]
+            private string[] Parts => Path.Split('/');
+
+            [JsonIgnore]
+            public int AppId => int.TryParse(Parts[1], out var appId) ? appId : -1;
+
+            [JsonIgnore]
+            public ulong? AddonId => ulong.TryParse(Parts[1], out var addonId) ? addonId : (ulong?)null;
+
+            [JsonIgnore]
+            public bool IsDownloaded => Directory.Exists(System.IO.Path.GetDirectoryName(Path));
 
             private DownloadedItem()
             {
