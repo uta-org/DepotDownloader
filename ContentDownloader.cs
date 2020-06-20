@@ -40,8 +40,13 @@ namespace DepotDownloader
 
         public static Action<ulong, ulong> DownloadProgressChanged { get; internal set; }
 
-        public static Action<List<DownloadedItem>> DownloadCompleted { get; internal set; }
-        public static Action<List<DownloadedItem>> MultipleDownloadCompleted { get; set; } = delegate { };
+        public static Action<List<DownloadedItem>> OnDownloadFinished { get; set; }
+
+        //public static DownloadFinished OnDownloadFinished { get; set; }
+
+        //public static Action<IEnumerable<object>> OnContentFinished { get; set; }
+
+        //public delegate Task<IEnumerable<object>> DownloadFinished(List<DownloadedItem> resultList);
 
         private static bool CreateDirectories(uint depotId, uint depotVersion, out string installDir)
         {
@@ -953,9 +958,10 @@ namespace DepotDownloader
                 Debug.Log(
                     $"Depot {depot.id} - Downloaded {DepotBytesCompressed} bytes ({DepotBytesUncompressed} bytes uncompressed)");
 
-                Debug.Assert(arrays.Length == 1); // TODO: This works only for single file download
-                DownloadCompleted(null); // TODO
-                MultipleDownloadCompleted(arrays.ToList());
+                //var result = await OnDownloadFinished(arrays.ToList());
+                //OnContentFinished(result);
+
+                OnDownloadFinished(arrays.ToList());
             }
 
             Debug.Log(
