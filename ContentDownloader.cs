@@ -841,7 +841,7 @@ namespace DepotDownloader
                                 {
                                     size_downloaded += file.TotalSize;
                                     Debug.Log($"{size_downloaded / (float)complete_download_size * 100.0f,6:#00.00}% {fileFinalPath}");
-                                    arr = fs.ReadFully();
+                                    arr = fs == null ? File.ReadAllBytes(fileFinalPath) : fs.ReadFully();
                                     fs?.Dispose();
                                     return new DownloadedItem(fileFinalPath, arr);
                                 }
@@ -970,6 +970,7 @@ namespace DepotDownloader
 
         private static byte[] ReadFully(this Stream input)
         {
+            if (input == null) throw new ArgumentNullException(nameof(input));
             using (var ms = new MemoryStream())
             {
                 input.CopyTo(ms);
