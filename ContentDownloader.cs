@@ -6,10 +6,11 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Newtonsoft.Json;
 using SteamKit2;
 using UnityEngine;
+
+// ReSharper disable ArrangeRedundantParentheses
 
 namespace DepotDownloader
 {
@@ -20,7 +21,7 @@ namespace DepotDownloader
         }
     }
 
-    internal static class ContentDownloader
+    public static class ContentDownloader
     {
         public const uint INVALID_APP_ID = uint.MaxValue;
         public const uint INVALID_DEPOT_ID = uint.MaxValue;
@@ -844,6 +845,7 @@ namespace DepotDownloader
                                     Debug.Log($"{size_downloaded / (float)complete_download_size * 100.0f,6:#00.00}% {fileFinalPath}");
                                     arr = fs == null ? File.ReadAllBytes(fileFinalPath) : fs.ReadFully();
                                     fs?.Dispose();
+
                                     return new DownloadedItem(fileFinalPath, arr);
                                 }
                                 else
@@ -1012,25 +1014,27 @@ namespace DepotDownloader
 
         [Serializable]
         public class DownloadedItem
+        // : ScriptableObject
         {
-            public string Path { get; }
+            [SerializeField]
+            public string Path { get; set; }
 
             [JsonIgnore]
-            public byte[] Data { get; }
+            public byte[] Data { get; set; }
 
             [JsonIgnore]
-            private string[] Parts => Path.Split('/');
+            protected string[] Parts => Path?.Contains("/") == true ? Path?.Split('/') : Path?.Split('\\');
 
             [JsonIgnore]
-            public int AppId => int.TryParse(Parts[1], out var appId) ? appId : -1;
+            public int AppId => Parts != null && Parts.Length > 0 ? (int.TryParse(Parts[1], out var appId) ? appId : -1) : -1;
 
             [JsonIgnore]
-            public ulong? AddonId => ulong.TryParse(Parts[1], out var addonId) ? addonId : (ulong?)null;
+            public ulong? AddonId => Parts != null && Parts.Length > 0 ? (ulong.TryParse(Parts[2], out var addonId) ? addonId : (ulong?)null) : null;
 
             [JsonIgnore]
             public bool IsDownloaded => Directory.Exists(System.IO.Path.GetDirectoryName(Path));
 
-            private DownloadedItem()
+            protected DownloadedItem()
             {
             }
 
@@ -1038,6 +1042,20 @@ namespace DepotDownloader
             {
                 Path = path;
                 Data = data;
+            }
+
+            public override string ToString()
+            {
+                return $"[Addon: '{Path}']";
+            }
+
+            public static Tuple<int, ulong?> GetData(string path)
+            {
+                string[] parts = path?.Contains("/") == true ? path?.Split('/') : path?.Split('\\');
+                int appId = parts != null && parts.Length > 0 ? (int.TryParse(parts[1], out var appIdResult) ? appIdResult : -1) : -1;
+                ulong? addonId = parts != null && parts.Length > 0 ? (ulong.TryParse(parts[2], out var addonIdResult) ? addonIdResult : (ulong?)null) : null;
+
+                return new Tuple<int, ulong?>(appId, addonId);
             }
         }
     }
