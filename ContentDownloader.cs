@@ -1016,7 +1016,6 @@ namespace DepotDownloader
         public class DownloadedItem
         // : ScriptableObject
         {
-            [SerializeField]
             public string Path { get; set; }
 
             [JsonIgnore]
